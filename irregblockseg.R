@@ -19,18 +19,15 @@ irregblockseg = function(Ymat, maxK, lam)
   
   Xmat = U2 %x% U1
   
-  res1 = glmnet(x = Xmat,y = Yvec, intercept = FALSE, standardize = TRUE,standardize.response = FALSE,lambda = 0.1)
-
-  plot(coef(res1)[-1], Bmm)
+  res1 = glmnet(x = Xmat[,-1],y = Yvec, intercept = TRUE, standardize = FALSE,lambda = 0.2)
+  Ypred = matrix(predict.glmnet(object = res1,newx = Xmat[,-1]),nrows, ncols)
   
-  matrix(coef(res1)[-1], nrows, ncols)
+  plot(Ypred, Yvec)
+  matrix(coef(res1), nrows, ncols)
   
   
-  matrix(predict.glmnet(object = res1,newx = Xmat),nrows, ncols)
-
   Bmm = solve(t(Xmat) %*% Xmat) %*% t(Xmat) %*% Yvec
-  matrix(Bmm, nrows, ncols)
-  
-  res2 = lars(Xmat, Yvec, normalize = FALSE, intercept = FALSE)
+  Ypred1 = Xmat %*% Bmm
+
 
 }
