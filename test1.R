@@ -13,6 +13,8 @@ mufun = function(x,y,threshold,mu1 = -2, mu2 = 2)
 
 mufun = Vectorize(mufun)
 
+
+
 #### several time observations and spatial lattice #####
 n = 10 ## regular grid size 
 ntime = 4
@@ -30,6 +32,15 @@ datadf = grids %>% mutate(
   mutate(obs = obs + 0.01*rnorm(n()))
 
 
+datadf = grids %>% mutate(
+  year = rep(1:ntime, each = n^2),
+  group = rep(1:2, each = ntime/2*n*n),
+  obs = case_when(group==1 ~  mufun(x,y,25, -4,4),
+                  group == 2 ~ mufun(x,y,49, -4,4))) %>%
+  mutate(obs = obs + 0.01*rnorm(n()))
+
+
+
 
 ggplot(data = filter(datadf, year ==4), aes(x = y, y=n+1 - x, color = obs)) +
   geom_point()
@@ -40,6 +51,14 @@ ggplot(data = filter(datadf, year ==4), aes(x = y, y=n+1 - x, color = obs)) +
 datmat =  select(datadf, y, x, year, obs) %>% spread(year, obs)
 Ymat = datmat[,-(1:2)]
 Ymat = as.matrix(Ymat)
+image(Ymat)
+
+
+dat1 = select(datadf, y, x, year, obs) %>% 
+  mutate(index = rep(1:100, 4))
+
+ggplot(data = dat1, aes(x = year, y = index, color = obs)) + geom_point()
+
 
 ### row matrix 
 datmat1 =  select(datadf, x, y, year, obs) %>% spread(year, obs)
