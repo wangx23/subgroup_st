@@ -1,28 +1,70 @@
-##### test for irregular matrix ####
-
-U1 = matrix(1,4,4)
-U2 = matrix(1,3,3)
-U1[upper.tri(U1)] = 0
-U2[upper.tri(U2)] = 0
-
-B1 = matrix(0,4,3)
-B1[,1] = rnorm(4)
-B1[,3] = rnorm(4)
-
-Y1 = U1 %*% B1 %*% t(U2)
-X1 = U2 %x% U1
-max(abs(c(Y1)  - X1 %*% c(B1)))
-  
+##### test for irregular matrix with spatial block####
 ######## sp matrix ###
 library(glmnet)
 library(lars)
-Ymat = matrix(0, 100, 4)
-Ymat[1:50,1:2] = rnorm(100)*0.1 + 5
-Ymat[51:100,1:2] = rnorm(100)*0.1 - 5
 
-Ymat[1:30,3:4] = rnorm(60)*0.1 + 5
-Ymat[31:100,3:4] = rnorm(140)*0.1 - 5
-image(Ymat)
+
+n = 10 ## regular grid size 
+ntime = 6
+n0 = n^2
+n1 = 50
+n2 = 30
+time1 = 3
+grids = matrix(1,ntime,1) %x% as.matrix(expand.grid(1:n,1:n))
+colnames(grids) = c("x","y") ### row number and column number 
+grids = as.data.frame(grids)
+
+Ymat = matrix(0, n0, ntime)
+Ymat[1:n1,1:time1] = rnorm(n1*time1)*0.1 + 4
+Ymat[(n1+1):n0,1:time1] = rnorm((n0-n1)*time1)*0.1 - 4
+
+Ymat[1:n2,(time1+1):ntime] = rnorm(n2*(ntime - time1))*0.1 + 4
+Ymat[(n2+1):n0,(time1 + 1):ntime] = rnorm((n0-n2)*(ntime - time1))*0.1 - 4
+
+datadf = grids %>% mutate(
+  year = rep(1:ntime, each = n^2),
+  grouptime = rep(1:2, each = ntime/2*n*n),
+  groupsp = c(rep(rep(1:2, c(n1,n0-n1)),time1), rep(rep(1:2, c(n2,n0-n2)),ntime - time1)),
+  obs = c(Ymat)) %>%
+  mutate(grouptime = as.factor(grouptime),
+         groupsp = as.factor(groupsp))
+
+ggplot(data = filter(datadf, year ==3), aes(x = y, y=n+1 - x, color = obs)) +
+  geom_point() + theme_bw() + theme(legend.position = "none")
+
+ggplot(data = filter(datadf, year ==4), aes(x = y, y=n+1 - x, color = obs)) +
+  geom_point() + theme_bw() + theme(legend.position = "none")
+
+theme1 = theme_bw() +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        legend.position = "none")
+
+g1 = ggplot(data = filter(datadf, year ==3), 
+            aes(x = y, y=n+1 - x, color = as.factor(groupsp))) +
+  geom_point() + theme1
+
+g2 = ggplot(data = filter(datadf, year ==4), 
+            aes(x = y, y=n+1 - x, color = as.factor(groupsp))) +
+  geom_point() + theme1
+
+grid.arrange(g1,g2, ncol = 2)
+
+
+### column matrix 
+datmat =  select(datadf, y, x, year, obs) %>% spread(year, obs)
+Ymat = datmat[,-(1:2)]
+Ymat = as.matrix(Ymat)
+
+dat1 = select(datadf, y, x, year, obs) %>% 
+  mutate(index = rep(n0:1, ntime))
+
+ggplot(data = dat1, aes(x = year, y = index)) + geom_raster(aes(fill = obs))
+
 
 ncols = ncol(Ymat)
 nrows = nrow(Ymat)
@@ -36,15 +78,12 @@ Yvec = c(Ymat)
 Xmat = U2 %x% U1
 
 res1 = glmnet(x = Xmat[,-1],y = Yvec, intercept = TRUE, standardize = FALSE,
-              lambda = 0.05)
-
-Ypred1 = predict.glmnet(object = res1,Xmat[,-1])
-coefmat = matrix(coef(res1), nrows, ncols)
-Ypred2 = U1 %*% coefmat %*% t(U2)
-image(Ypred2)
-max(abs(Ypred1 - c(Ypred2)))
+              lambda = 0.1)
+Ypred1 = U1 %*% coefmat %*% t(U2)
+image(Ypred1)
 plot(Ypred1, Yvec)
 sum(coefmat!=0)
+table(Ypred1)
 
 
 
