@@ -2,7 +2,9 @@
 ######## sp matrix ###
 library(glmnet)
 library(lars)
-
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
 
 n = 10 ## regular grid size 
 ntime = 6
@@ -74,26 +76,35 @@ U1[upper.tri(U1)] = 0
 U2[upper.tri(U2)] = 0
 
 Yvec = c(Ymat)
-
 Xmat = U2 %x% U1
 
 res1 = glmnet(x = Xmat[,-1],y = Yvec, intercept = TRUE, standardize = FALSE,
-              lambda = 0.1)
+              lambda = 0.05)
+coefmat = matrix(coef(res1), nrows, ncols)
 Ypred1 = U1 %*% coefmat %*% t(U2)
-image(Ypred1)
 plot(Ypred1, Yvec)
 sum(coefmat!=0)
 table(Ypred1)
 
+dat2 = dat1
+dat2$obs = c(Ypred1)
+ggplot(data = dat2, aes(x = year, y = index)) + geom_raster(aes(fill = obs))
 
 
-res2 = lars(x = Xmat,y = Yvec,intercept = FALSE,normalize = FALSE,
+
+res3 = lars(x = Xmat,y = Yvec,intercept = FALSE,normalize = FALSE,
             max.steps = 20, type = "lar")
-coefmat2 = matrix(coef(res2)[9,], nrows, ncols)
-Ypred3 = U1 %*% coefmat2 %*% t(U2)
+coefmat3 = matrix(coef(res3)[7,], nrows, ncols)
+Ypred3 = U1 %*% coefmat3 %*% t(U2)
 image(Ypred3)
 plot(c(Ypred3), Yvec)
-sum(coefmat2!=0)
+sum(coefmat3!=0)
+
+dat3 = dat1
+dat3$obs = c(Ypred3)
+ggplot(data = dat3, aes(x = year, y = index)) + geom_raster(aes(fill = obs))
+
+table(Ypred3)
 
 
 
